@@ -7,37 +7,32 @@ from PyQt5.QtWidgets import QVBoxLayout, QTableView, QAbstractItemView
 from PyQt5.QtWidgets import QWidget
 
 
-class sqlite_conect(object):
-    def sqlite_conect(self, find_text, find_function):
+class SqliteConect(object):
+    def __init__(self, find_text):
         self.connection = mdb.connect('imenik.db')
         self.cursor = self.connection.cursor()
         self.find_text1 = "%" + find_text + "%"
 
-        db = QtSql.QSqlDatabase.addDatabase("SQLITE3");
+        db = QtSql.QSqlDatabase.addDatabase("SQLITE3")
 
-        ok = db.open()
+        db.open()
 
 
 def createConnection():
     db = QtSql.QSqlDatabase.addDatabase("QSQLITE")
     db.setDatabaseName("imenik.db")
     if not db.open():
-        QtWidgets.QMessageBox.critical(None, "Cannot open database",
-                                       "Unable to establish a database connection.\n"
-                                       "This example needs SQLite support. Please read "
-                                       "the Qt SQL driver documentation for information how "
-                                       "to build it.\n\n"
-                                       "Click Cancel to exit.", QtWidgets.QMessageBox.Cancel)
+        QtWidgets.QMessageBox.warning(None, "Cannot open database", '!')
         return False
     return True
 
 
-class Glavni_prozor(QWidget):
+class GlavniProzor(QWidget):
     def __init__(self):
-        super(Glavni_prozor, self).__init__()
+        super(GlavniProzor, self).__init__()
         self.setFixedSize(1024, 768)
 
-        self.edit_window = edit_window(self)
+        self.edit_window = EditWindow(self)
 
         layout = QVBoxLayout(self)
 
@@ -53,54 +48,24 @@ class Glavni_prozor(QWidget):
         # pravi promjenjivu za pretragu baze podataka
         self.model = QtSql.QSqlQueryModel()
 
-        ## ---
-        ##self.model.setQuery("SELECT Lokacija,Kancelarija,Prezime,Ime,Telefon,Lokal,Fax,Oblast FROM telImenik")
-        # +++ id, !!!
-        self.model.setQuery("""SELECT 
-                                   id,                
-                                   Lokacija,
-                                   Kancelarija,
-                                   Prezime,
-                                   Ime,
-                                   Telefon,
-                                   Lokal,
-                                   Fax,
-                                   Oblast 
-                               FROM telImenik""")
+        self.model.setQuery("SELECT id, Lokacija, Kancelarija, Prezime, Ime, Telefon, Lokal, Fax, Oblast FROM telImenik")
 
-        # upisuje rezultate pretrage baze u self.tableView
         self.tabelaEditovanje.setModel(self.model)
 
-        # ---
-        ## odredjuje sirinu kolona u self.tableView-u prva kolona je 0-nulta,id nema potrebe dodavati jer ga sam odredjuje
-        ##for i, width in enumerate([150, 65, 100, 80, 90, 40, 80, 340]):
-        ##    self.tabelaEditovanje.setColumnWidth(i, width)
-
-        # +++
         for i, width in enumerate([10, 150, 65, 100, 80, 90, 40, 80, 340]):
             self.tabelaEditovanje.setColumnWidth(i, width)
-        # Если hide True/верно, данный столбец будет скрыт; в противном случае это будет показано.
         self.tabelaEditovanje.setColumnHidden(0, True)  # id не показываем!!!
+
+        self.id_db = None
 
     def prikazi_drugi(self):
         self.edit_window.show()
 
     def close(self):
         self.edit_window.close()
-        super(Glavni_prozor, self).close()
+        super(GlavniProzor, self).close()
 
-    # --- +++
     def select_id(self, index):
-
-        # ---        id_read=index.row()+1
-        # ---        print(id_read)
-        # ---        konekcija = sqlite_conect()
-        # ---        konekcija.sqlite_conect("", "")
-        # ---        konekcija.cursor.execute("SELECT * FROM telImenik WHERE id= '%s'" % (id_read))
-        # ---        row = konekcija.cursor.fetchone()
-        # ---        print(row)
-
-        # +++
         row = index.row()
         self.id_db = self.model.record(row).value("id")
         print("row->`{}`, id_db->`{}`".format(row, self.id_db))
@@ -112,7 +77,6 @@ class Glavni_prozor(QWidget):
         self.edit_window.le_fax.setText(self.model.record(row).value("Fax"))
         self.edit_window.le_oblast.setText(self.model.record(row).value("Oblast"))
 
-    # +++
     def clickedBtnSave(self):
         prezime = self.edit_window.le_prezime.text()
         ime = self.edit_window.le_ime.text()
@@ -123,18 +87,9 @@ class Glavni_prozor(QWidget):
 
         self.editDb(self.id_db, prezime, ime, telefon, lokal, fax, oblast)
 
-    # +++
     def editDb(self, id_db, prezime, ime, telefon, lokal, fax, oblast):
         self.edit_window.hide()
-        q = QtSql.QSqlQuery(""" UPDATE telImenik 
-                                   SET Prezime = '{}',
-                                       Ime     = '{}',
-                                       Telefon = '{}',
-                                       Lokal   = '{}',
-                                       Fax     = '{}',
-                                       Oblast  = '{}'
-                                 WHERE id =  '{}'
-                            """.format(prezime, ime, telefon, lokal, fax, oblast, id_db))
+        q = QtSql.QSqlQuery(f"UPDATE telImenik SET Prezime='{prezime}',Ime='{ime}',Telefon='{telefon}',Lokal='{lokal}',Fax='{fax}',Oblast='{oblast}'WHERE id='{id_db}'")
 
         result = q.exec_()
         if result:
@@ -144,16 +99,15 @@ class Glavni_prozor(QWidget):
             print("Error ->", self.model.query().lastError().text())
         return result
 
-    # +++
     def clickedBtnCancel(self):
         self.edit_window.hide()
 
 
-class edit_window(QWidget):
+class EditWindow(QWidget):
     def __init__(self, parent):
-        super(edit_window, self).__init__()
+        super(EditWindow, self).__init__()
 
-        edit_window.setWindowTitle(self, 'Izmjena podataka postojećeg korisnika')
+        EditWindow.setWindowTitle(self, 'Izmjena podataka postojećeg korisnika')
         self.setFixedSize(500, 400)
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
@@ -222,16 +176,12 @@ class edit_window(QWidget):
         self.lbl_oblast.setObjectName("lbl_oblast")
         self.lbl_oblast.setText('Oblast')
 
-        # ---    self.btn_save = QtWidgets.QPushButton(self.groupBox)
-        # +++
         self.btn_save = QtWidgets.QPushButton(self.groupBox, clicked=parent.clickedBtnSave)
 
         self.btn_save.setGeometry(QtCore.QRect(140, 340, 80, 25))
         self.btn_save.setObjectName("btn_save")
         self.btn_save.setText('Snimi izmjene')
 
-        # ---    self.btn_cancel = QtWidgets.QPushButton(self.groupBox)
-        # +++
         self.btn_cancel = QtWidgets.QPushButton(self.groupBox, clicked=parent.clickedBtnCancel)
 
         self.btn_cancel.setGeometry(QtCore.QRect(230, 340, 80, 25))
@@ -240,7 +190,8 @@ class edit_window(QWidget):
 
         self.layout.addWidget(self.groupBox)
 
-    def select_id(self, index):
+    @staticmethod
+    def select_id(index):
         id_read = index() + 1
         print(id_read)
 
@@ -249,6 +200,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     if not createConnection():
         sys.exit(-1)
-    mw = Glavni_prozor()
+    mw = GlavniProzor()
     mw.show()
     sys.exit(app.exec_())
